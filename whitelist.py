@@ -7,6 +7,7 @@ ALLOWED_HOSTS = {
     "bci.cl",
     "caja18.cl", "beneficios.caja18.cl",
     "sitiospublicos.bancochile.cl"
+    "start.bancoestado.cl", "bancoestado.cl", "rutpay.cl"
 }
 
 def is_allowed(url: str) -> bool:
