@@ -20,7 +20,7 @@ def write_rows(rows):
     except Exception:
         ws = sh.add_worksheet(title="Beneficios", rows=100, cols=8)
 
-    header = ["Proveedor","Categoría","Comercio","Beneficio","Vigencia","Link","Fuente","Extraido_En"]
+    header = ["Proveedor","Marca","Categoria_norm","Descuento","Dias","Link_show","Fuente_corta","Categoría","Comercio","Beneficio","Vigencia","Link","Fuente","Extraido_En"]
 
     # Si la hoja está vacía, crea encabezado
     if ws.row_count == 0 or ws.cell(1,1).value != header[0]:
