@@ -1,1 +1,33 @@
+name: Beneficios Mensuales
+
+on:
+  schedule:
+    - cron: "0 11 1 * *"   # Día 1, 11:00 UTC (08:00 Chile GMT-3 aprox)
+  workflow_dispatch: {}     # Permite ejecutarlo manualmente para probar
+
+jobs:
+  scrape-and-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Run scraper
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+        run: python main.py
 
