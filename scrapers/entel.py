@@ -1,4 +1,4 @@
-rom bs4 import BeautifulSoup
+from bs4 import BeautifulSoup
 from datetime import datetime
 
 URL = "https://www.entel.cl/beneficios"  # catálogo público Club Entel
