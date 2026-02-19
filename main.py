@@ -10,6 +10,7 @@ from scrapers.movistar import parse_movistar, URLS as MOV_URLS
 from scrapers.bci import parse_bci, URL as BCI_URL
 from scrapers.caja18 import parse_all as parse_caja18, URLS as CAJA18_URLS
 from scrapers.bancochile import parse_all as parse_bch, URLS as BCH_URLS
+from scrapers.bancoestado import parse_all as parse_be, URLS as BE_URLS
 
 # ==== Escritura de resultados ====
 from sheets import write_rows
@@ -119,6 +120,16 @@ async def run():
         caja_rows = parse_caja18(html_map_caja18) if html_map_caja18 else []
         print(f"[INFO] CAJA18 items: {len(caja_rows)}")
         rows += caja_rows
+
+        # =============== BANCOESTADO (múltiples URLs de lista blanca) =======
+html_map_be = {}
+for u in BE_URLS:
+    h = await gentle_load(page, u)
+    if h:
+        html_map_be[u] = h
+be_rows = parse_be(html_map_be) if html_map_be else []
+print(f"[INFO] BANCOESTADO items: {len(be_rows)}")
+rows += be_rows
 
         # =============== BANCO DE CHILE (múltiples URLs) ==
         html_map_bch = {}
