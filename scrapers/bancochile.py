@@ -1,76 +1,57 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
+import re
+from scrapers.utils import looks_like_offer
 
-# Páginas públicas donde Banco de Chile lista beneficios/promos.
+# SOLO esta fuente pública (listado de beneficios/campañas)
 URLS = [
-    # Catálogo general de beneficios (sitio público)
-    "https://sitiospublicos.bancochile.cl/personas/beneficios",
-    # Campañas (ej.: Back To School 2026 / “Vuelta a clases”)
-    "https://sitiospublicos.bancochile.cl/personas/beneficios/campanas/bts-2026",
-    # Home (a veces hay módulos con promos fechadas)
-    "https://www.bancochile.cl/",
-    # Programa Travel (sección beneficios/panoramas/ofertas)
-    "https://www.travel.cl/"
+    "https://sitiospublicos.bancochile.cl/personas/beneficios"
 ]
 
-def _norm_row(categoria, comercio, beneficio, link, fuente):
-    return {
-        "Proveedor": "Banco de Chile",
-        "Categoría": categoria or "Beneficios",
-        "Comercio": (comercio or "").strip()[:120],
-        "Beneficio": (beneficio or "").strip(),
-        "Vigencia": "",
-        "Link": link,
-        "Fuente": fuente,
-        "Extraido_En": datetime.now().isoformat()
-    }
+PCT = re.compile(r"\d+%")
+AMT = re.compile(r"\$\s?\d{1,3}(?:[.,]\d{3})*")
 
 def parse_single(html: str, source: str):
     soup = BeautifulSoup(html, "html.parser")
     rows = []
-
-    # 1) Bloques “tarjeta”/enlaces con textos de descuento
-    for block in soup.find_all(["section","article","div","li","a"]):
-        text = block.get_text(" ", strip=True)
-        if not text:
+    for card in soup.find_all(["section","article","div","li","a"]):
+        text = card.get_text(" ", strip=True)
+        if not looks_like_offer(text):
             continue
-        low = text.lower()
 
-        # Heurística de beneficios: “dto”, “descuento”, “cuotas sin interés”, “dólares‑premio”
-        if any(k in low for k in ["dto", "descuento", "cuotas sin interés", "dólares-premio", "cashback", "promoción", "beneficio"]):
-            # Evita textos gigantes de layout
-            if 25 <= len(text) <= 600:
-                # comercio suele estar en el título de la tarjeta/enlace
-                title_tag = block.find(["h3","h2","strong","b"])
-                comercio = title_tag.get_text(strip=True) if title_tag else text.split(".")[0][:80]
+        # Título probable
+        title_tag = card.find(["h3","h2","strong","b"])
+        comercio = title_tag.get_text(strip=True) if title_tag else text.split(".")[0][:80]
 
-                # link si existe
-                href = ""
-                if hasattr(block, "name") and block.name == "a" and block.has_attr("href"):
-                    href = block["href"]
-                link = href if href.startswith("http") else source
+        # Link preferente del propio card si existe
+        href = card.get("href", "")
+        link = href if href.startswith("http") else source
 
-                # categoría aproximada por contexto
-                cat = "Beneficios"
-                section = block.find_parent(["section","div"])
-                if section:
-                    hsec = section.find(["h2","h3"])
-                    if hsec and 2 <= len(hsec.get_text(strip=True)) <= 60:
-                        cat = hsec.get_text(strip=True)
+        # Categoría por heading ancestro
+        cat = "Beneficios"
+        parent = card.find_parent(["section","div"])
+        if parent:
+            h = parent.find(["h2","h3"])
+            if h and 2 <= len(h.get_text(strip=True)) <= 60:
+                cat = h.get_text(strip=True)
 
-                rows.append(_norm_row(cat, comercio, text, link, source))
-
-    # 2) Deduplicación por Comercio+Beneficio
+        rows.append({
+            "Proveedor": "Banco de Chile",
+            "Categoría": cat,
+            "Comercio": comercio,
+            "Beneficio": text,
+            "Vigencia": "",
+            "Link": link,
+            "Fuente": source,
+            "Extraido_En": datetime.now().isoformat()
+        })
+    # dedup
     uniq = {(r["Comercio"], r["Beneficio"]): r for r in rows}
     return list(uniq.values())
 
 def parse_all(html_map: dict):
-    """
-    html_map = {url: html}
-    """
     out = []
     for url, html in html_map.items():
         out += parse_single(html, url)
-    # Dedupe global
     uniq = {(r["Proveedor"], r["Comercio"], r["Beneficio"]): r for r in out}
     return list(uniq.values())
