@@ -1,3 +1,8 @@
+from bs4 import BeautifulSoup
+from datetime import datetime
+
+URL = "https://www.entel.cl/beneficios"   # ← vuelve a declarar la constante
+
 # Dentro de parse_entel, reemplaza el bucle principal por este:
 
 def parse_entel(html:str):
