@@ -1,4 +1,3 @@
-# main.py
 import asyncio
 from datetime import datetime
 from collections import Counter
@@ -121,16 +120,6 @@ async def run():
         print(f"[INFO] CAJA18 items: {len(caja_rows)}")
         rows += caja_rows
 
-        # =============== BANCOESTADO (múltiples URLs de lista blanca) =======
-html_map_be = {}
-for u in BE_URLS:
-    h = await gentle_load(page, u)
-    if h:
-        html_map_be[u] = h
-be_rows = parse_be(html_map_be) if html_map_be else []
-print(f"[INFO] BANCOESTADO items: {len(be_rows)}")
-rows += be_rows
-
         # =============== BANCO DE CHILE (múltiples URLs) ==
         html_map_bch = {}
         for u in BCH_URLS:
@@ -140,6 +129,16 @@ rows += be_rows
         bch_rows = parse_bch(html_map_bch) if html_map_bch else []
         print(f"[INFO] BANCO DE CHILE items: {len(bch_rows)}")
         rows += bch_rows
+
+        # =============== BANCOESTADO (múltiples URLs) =====
+        html_map_be = {}
+        for u in BE_URLS:
+            h = await gentle_load(page, u)
+            if h:
+                html_map_be[u] = h
+        be_rows = parse_be(html_map_be) if html_map_be else []
+        print(f"[INFO] BANCOESTADO items: {len(be_rows)}")
+        rows += be_rows
 
         await browser.close()
 
@@ -177,8 +176,6 @@ rows += be_rows
 
     # ---------------------------------------------------------
     # Escritura a Google Sheets
-    # (Asegúrate de que 'sheets.py' tenga el header ampliado si
-    # quieres guardar también las columnas normalizadas)
     # ---------------------------------------------------------
     print(f"[INFO] Total filas a escribir: {len(rows)}")
     write_rows(rows)
