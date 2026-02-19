@@ -45,4 +45,3 @@ def parse_movistar(html: str):
     # Dedup por Beneficio
     uniq = {d["Beneficio"]: d for d in data}
     return list(uniq.values())
-``
