@@ -1,37 +1,43 @@
-from bs4 import BeautifulSoup
-from datetime import datetime
-
-URL = "https://www.entel.cl/beneficios"  # catálogo público Club Entel
+# Dentro de parse_entel, reemplaza el bucle principal por este:
 
 def parse_entel(html:str):
     soup = BeautifulSoup(html, "html.parser")
     data = []
 
-    # Heurística: busca secciones y tarjetas con títulos/links
-    for sec in soup.find_all(["section","div"]):
-        # categoría aproximada por heading
-        h = sec.find(["h2","h3"])
-        categoria = h.get_text(strip=True) if h else "Beneficios"
-        cards = sec.find_all(["article","div"], class_=lambda c: c and any(k in c.lower() for k in ["card","benef"]))
-        for c in cards:
-            titulo_tag = c.find(["h3","h2","strong"])
-            titulo = titulo_tag.get_text(strip=True) if titulo_tag else None
-            detalle_tag = c.find(["p","span"])
-            detalle = detalle_tag.get_text(strip=True) if detalle_tag else ""
-            a = c.find("a")
-            href = a.get("href") if a else URL
-            if titulo:
+    # Busca tarjetas de beneficios por clases comunes y por contenido semántico
+    candidates = soup.find_all(["section","div","article","li","a"])
+    for c in candidates:
+        text = c.get_text(" ", strip=True)
+        if not text: 
+            continue
+        low = text.lower()
+        if any(k in low for k in ["descuento", "beneficio", "club entel", "%", "dcto", "promoción", "entradas"]):
+            if 20 <= len(text) <= 600:
+                # Categoría deducida por heading más cercano
+                cat = "Beneficios"
+                parent = c.find_parent(["section","div"])
+                if parent:
+                    h = parent.find(["h2","h3"])
+                    if h and 2 <= len(h.get_text(strip=True)) <= 60:
+                        cat = h.get_text(strip=True)
+
+                title_tag = c.find(["h3","h2","strong","b"])
+                titulo = title_tag.get_text(strip=True) if title_tag else text.split(".")[0][:80]
+
+                a = c.find("a")
+                href = a.get("href") if a else ""
+                link = href if href.startswith("http") else "https://www.entel.cl/beneficios"
+
                 data.append({
                     "Proveedor":"Entel - Club Entel",
-                    "Categoría": categoria,
+                    "Categoría": cat,
                     "Comercio": titulo,
-                    "Beneficio": detalle,
+                    "Beneficio": text,
                     "Vigencia": "",
-                    "Link": href if href.startswith("http") else f"https://www.entel.cl{href}",
-                    "Fuente": URL,
+                    "Link": link,
+                    "Fuente": "https://www.entel.cl/beneficios",
                     "Extraido_En": datetime.now().isoformat()
                 })
-    # dedup
+
     uniq = {(d["Comercio"], d["Beneficio"]): d for d in data}
     return list(uniq.values())
-
